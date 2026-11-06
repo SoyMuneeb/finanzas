@@ -403,22 +403,17 @@ export function MovementForm({
       notes,
     };
     try {
-      await api(`/movements${movement ? `/${movement.id}` : ""}`, {
-        method: movement ? "PUT" : "POST",
-        body: json(data),
-      });
       if (frequency && !movement) {
-        const next = new Date(`${date}T12:00:00`);
-        if (frequency === "WEEKLY") next.setDate(next.getDate() + 7);
-        if (frequency === "MONTHLY") next.setMonth(next.getMonth() + 1);
-        if (frequency === "YEARLY") next.setFullYear(next.getFullYear() + 1);
+        // Start on the chosen date so the server preserves month-end anchors.
         await api("/recurrences", {
           method: "POST",
-          body: json({
-            ...data,
-            frequency,
-            nextDate: next.toISOString().slice(0, 10),
-          }),
+          body: json({ ...data, frequency, nextDate: date }),
+        });
+        await api("/recurrences/run", { method: "POST" });
+      } else {
+        await api(`/movements${movement ? `/${movement.id}` : ""}`, {
+          method: movement ? "PUT" : "POST",
+          body: json(data),
         });
       }
       onSaved();
