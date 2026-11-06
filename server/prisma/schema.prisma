@@ -1,0 +1,121 @@
+generator client {
+ provider = "prisma-client-js"
+ engineType = "client"
+}
+datasource db {
+ provider = "sqlite"
+ url = env("DATABASE_URL")
+}
+model User {
+ id String @id @default(cuid())
+ email String @unique
+ passwordHash String
+ createdAt DateTime @default(now())
+ accounts Account[]
+ categories Category[]
+ movements Movement[]
+ rules Rule[]
+ budgets Budget[]
+ apiKeys ApiKey[]
+ recurrences Recurrence[]
+}
+model Account {
+ id String @id @default(cuid())
+ userId String
+ user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+ name String
+ initialBalanceCents Int @default(0)
+ movements Movement[]
+ recurrences Recurrence[]
+ @@unique([userId,name])
+}
+model Category {
+ id String @id @default(cuid())
+ userId String
+ user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+ name String
+ color String @default("#64748b")
+ icon String @default("tag")
+ type String @default("EXPENSE")
+ parentId String?
+ parent Category? @relation("Hierarchy",fields:[parentId],references:[id],onDelete:SetNull)
+ children Category[] @relation("Hierarchy")
+ movements Movement[]
+ rules Rule[]
+ budgets Budget[]
+ recurrences Recurrence[]
+ @@unique([userId,name])
+}
+model Movement {
+ id String @id @default(cuid())
+ userId String
+ user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+ date String
+ concept String
+ amountCents Int
+ type String
+ categoryId String?
+ category Category? @relation(fields:[categoryId],references:[id],onDelete:SetNull)
+ accountId String
+ account Account @relation(fields:[accountId],references:[id],onDelete:Restrict)
+ notes String @default("")
+ source String @default("MANUAL")
+ reviewPending Boolean @default(false)
+ hash String
+ recurrenceId String?
+ recurrence Recurrence? @relation(fields:[recurrenceId],references:[id],onDelete:SetNull)
+ occurrenceDate String?
+ createdAt DateTime @default(now())
+ @@index([userId,date])
+ @@index([userId,hash])
+ @@unique([recurrenceId,occurrenceDate])
+}
+model Rule {
+ id String @id @default(cuid())
+ userId String
+ user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+ keyword String
+ categoryId String
+ category Category @relation(fields:[categoryId],references:[id],onDelete:Cascade)
+ @@unique([userId,keyword])
+}
+model Budget {
+ id String @id @default(cuid())
+ userId String
+ user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+ categoryId String?
+ category Category? @relation(fields:[categoryId],references:[id],onDelete:Cascade)
+ period String
+ year Int
+ month Int?
+ amountCents Int
+ @@index([userId,year,month])
+}
+model ApiKey {
+ id String @id @default(cuid())
+ userId String
+ user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+ name String
+ keyHash String @unique
+ prefix String
+ createdAt DateTime @default(now())
+ lastUsedAt DateTime?
+}
+model Recurrence {
+ id String @id @default(cuid())
+ userId String
+ user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+ concept String
+ amountCents Int
+ type String
+ categoryId String?
+ category Category? @relation(fields:[categoryId],references:[id],onDelete:SetNull)
+ accountId String
+ account Account @relation(fields:[accountId],references:[id],onDelete:Restrict)
+ notes String @default("")
+ frequency String
+ nextDate String
+ anchorDay Int
+ active Boolean @default(true)
+ movements Movement[]
+}
